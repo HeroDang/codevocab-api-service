@@ -1,4 +1,4 @@
-===============================================
+
 SE405 - Vocabulary Learning App (Backend System)
 ===============================================
 
@@ -10,14 +10,7 @@ This project contains:
 
 Folder Structure
 ----------------
-project-root/
- ├── docker-compose.yml      -> Compose file for DB + API
- ├── db/
- │    └── init/
- │         ├── 01_create_tables.sql
- │         └── 02_seed_data.sql
- ├── api-service/            -> FastAPI backend source
- └── README.txt              -> This file
+<img width="517" height="220" alt="image" src="https://github.com/user-attachments/assets/00b6bc90-a266-4694-bcbd-32093e2a2133" />
 
 -------------------------------------------
 HOW TO RUN THE SYSTEM (FOR TEAM MEMBERS)
@@ -67,18 +60,10 @@ The SQL files in db/init/ will run automatically:
 -------------------------------------------
 API SERVICE LOCATION
 -------------------------------------------
-
 The FastAPI backend source code is inside:
 
-api-service/
- ├── app/
- │    ├── main.py
- │    ├── db.py
- │    ├── models/
- │    ├── routers/
- │    └── services/
- ├── requirements.txt
- └── Dockerfile
+<img width="263" height="246" alt="image" src="https://github.com/user-attachments/assets/6351c116-fca7-407e-b2bb-bcb18f0fe87b" />
+
 
 -------------------------------------------
 DEVELOPMENT WORKFLOW (FOR TEAM)
