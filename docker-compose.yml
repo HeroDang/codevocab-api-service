@@ -1,0 +1,40 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: 123456
+    ports:
+      - "8080:80"
+  
+  api-service:                              # <<< SERVICE A MỚI
+    build: ./api-service                    # Dockerfile nằm trong folder api-service
+    container_name: api_service_backend
+    restart: unless-stopped
+    depends_on:
+      - postgres                             # đảm bảo DB chạy trước API
+    ports:
+      - "8000:8000"                          # API chạy ở Máy:8000 → Container:8000
+    environment:
+      DATABASE_URL: postgresql://postgres:123456@postgres:5432/appdb
+      # Nếu muốn dùng trong app: os.getenv("DATABASE_URL")
+
+volumes:
+  db_data:

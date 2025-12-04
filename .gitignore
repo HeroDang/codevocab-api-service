@@ -1,0 +1,86 @@
+# =========================================
+# PYTHON & FASTAPI BACKEND
+# =========================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.log
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Byte-compiled / optimized files
+*.py[cod]
+
+# Mypy / Type checking
+.mypy_cache/
+.pytype/
+typings/
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================================
+# DOCKER
+# =========================================
+# Local volumes / bind mount data
+volumes/
+data/
+tmp/
+*.pid
+
+# Docker build cache
+docker-compose.override.yml
+docker-compose.local.yml
+
+# =========================================
+# ENVIRONMENT VARIABLES (VERY IMPORTANT)
+# =========================================
+.env
+*.env
+
+# Secrets / Keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.keystore
+*.jks
+
+# =========================================
+# OS / EDITOR / IDE FILES
+# =========================================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# VSCode
+.vscode/
+
+# PyCharm / JetBrains
+.idea/
+*.iml
+
+# =========================================
+# PROJECT SPECIFIC
+# =========================================
+# DB dump (if any)
+*.sql.dump
+*.backup
+
+# Avoid uploading pgAdmin local files
+pgadmin/
+
+# Your service build artifacts
+api-service/__pycache__/
+api-service/app/__pycache__/
