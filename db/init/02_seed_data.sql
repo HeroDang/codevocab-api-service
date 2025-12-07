@@ -1,13 +1,13 @@
 -----------------------------------------------------------
 -- USERS
 -----------------------------------------------------------
-INSERT INTO users (id, email, password_hash, name, avatar_url, disabled)
+INSERT INTO users (id, email, password_hash, name, avatar_url, role, disabled)
 VALUES
-(gen_random_uuid(), 'user1@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Alice', NULL, FALSE),
-(gen_random_uuid(), 'user2@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Bob', NULL, FALSE),
-(gen_random_uuid(), 'user3@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Charlie', NULL, FALSE)
-(gen_random_uuid(), 'admin', '12345', 'Admin', NULL, FALSE)
-(gen_random_uuid(), 'user', '12345', 'User', NULL, FALSE)
+(gen_random_uuid(), 'user1@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Alice', NULL, user, FALSE),
+(gen_random_uuid(), 'user2@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Bob', NULL, user, FALSE),
+(gen_random_uuid(), 'user3@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Charlie', NULL, user, FALSE)
+(gen_random_uuid(), 'admin', '12345', 'Admin', NULL, admin, FALSE)
+(gen_random_uuid(), 'user', '12345', 'User', NULL, user, FALSE)
 ON CONFLICT (email) DO NOTHING;
 
 

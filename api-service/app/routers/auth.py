@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.db import get_db
 from app.schemas.user import UserCreate, UserOut, RegisterAndLoginResponse
+from app.schemas.auth import Token, TokenData, UserInDB
 from app.services.user_service import (
     get_user_by_email,
     create_user,
@@ -24,7 +25,7 @@ from app.services.user_service import (
 SECRET_KEY = "change_this_to_a_long_random_secret_key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 giờ
-DEV_BYPASS_EMAILS = ["admin", "user"]  # email login dev
+DEV_BYPASS_EMAILS = ["admin@example.com", "rootuser@example.com"]  # email login dev
 DEV_BYPASS_PASSWORD = "12345"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
@@ -35,33 +36,6 @@ router = APIRouter(
     prefix="/auth",
     tags=["auth"],
 )
-
-# ==========================
-# Pydantic models
-# ==========================
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-
-class User(BaseModel):
-    id: UUID
-    email: str
-    name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    disabled: Optional[bool] = None
-
-    class Config:
-        orm_mode = True
-
-
-class UserInDB(User):
-    hashed_password: str
-
 
 # ==========================
 # Fake user DB (tạm thời)
@@ -127,6 +101,9 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
+        user_id = payload.get("user_id")
+        role = payload.get("role")
+        
         if email is None:
             raise credentials_exception
     except JWTError:
@@ -161,14 +138,18 @@ async def login_for_access_token(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Sai email hoặc mật khẩu",
+            detail="Sai email",
         )
 
     # ======================================================
     # DEV MODE: bypass password cho admin / user
     # ======================================================
     if email in DEV_BYPASS_EMAILS and password == DEV_BYPASS_PASSWORD:
-        access_token = create_access_token(data={"sub": email})
+        access_token = create_access_token(data={
+            "sub": user.email,
+            "user_id": str(user.id),
+            "role": user.role,
+        })
         return {"access_token": access_token, "token_type": "bearer"}
     # ======================================================
 
@@ -176,10 +157,14 @@ async def login_for_access_token(
     if not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Sai email hoặc mật khẩu",
+            detail="Sai mật khẩu",
         )
 
-    access_token = create_access_token(data={"sub": email})
+    access_token = create_access_token(data={
+        "sub": user.email,
+        "user_id": str(user.id),
+        "role": user.role,
+    })
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -217,7 +202,11 @@ async def register_and_login(
 
     # Create token automatically
     access_token = create_access_token(
-        data={"sub": new_user.email}
+        data={
+        "sub": new_user.email,
+        "user_id": str(new_user.id),
+        "role": new_user.role,
+        }
     )
 
     return {
@@ -228,9 +217,9 @@ async def register_and_login(
 
 
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=UserOut)
 async def read_users_me(
-    current_user: User = Depends(get_current_active_user),
+    current_user: UserOut = Depends(get_current_active_user),
 ):
     """
     Test endpoint cần Bearer token.

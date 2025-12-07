@@ -15,3 +15,4 @@ class User(Base):
     avatar_url = Column(String, nullable=True)
     disabled = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    role = Column(String, default="user", nullable=False)

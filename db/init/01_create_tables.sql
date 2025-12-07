@@ -10,6 +10,7 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     name TEXT,
     avatar_url TEXT,
+    role VARCHAR(20) NOT NULL DEFAULT 'user',
     disabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW()
 );

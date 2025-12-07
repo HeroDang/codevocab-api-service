@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     name: str | None = None
     avatar_url: str | None = None
     disabled: bool | None = False
+    role: str = "user"
 
 
 # ==========================================================
