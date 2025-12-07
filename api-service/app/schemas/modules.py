@@ -10,7 +10,7 @@ class ModuleBase(BaseModel):
 class ModuleCreate(ModuleBase):
     owner_id: UUID
 
-class ModuleResponse(ModuleBase):
+class ModuleOut(ModuleBase):
     id: UUID
 
     class Config:
