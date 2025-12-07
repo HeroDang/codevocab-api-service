@@ -4,8 +4,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import DateTime
 import uuid
 
-from sqlalchemy.ext.declarative import declarative_base
-Base = declarative_base()
+from app.db import Base
 
 class Word(Base):
     __tablename__ = "words"

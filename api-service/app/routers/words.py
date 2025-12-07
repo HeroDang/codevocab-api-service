@@ -5,8 +5,13 @@ from app.db import get_db
 from app.db_sql import sql
 from app.schemas.words import WordCreate, WordResponse
 from app.services.word_service import WordService
+from app.routers.auth import get_current_active_user
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/words",
+    tags=["words"],
+    dependencies=[Depends(get_current_active_user)]   # BẢO VỆ TOÀN ROUTER
+)  
 
 @router.get("/sql")
 def get_words(db: Session = Depends(get_db)):

@@ -5,7 +5,7 @@ from sqlalchemy import DateTime
 import uuid
 from sqlalchemy.orm import relationship
 
-from app.models.words import Base
+from app.db import Base
 
 class Module(Base):
     __tablename__ = "modules"

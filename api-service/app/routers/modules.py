@@ -5,8 +5,13 @@ from app.db import get_db
 from app.db_sql import sql
 from app.schemas.modules import ModuleCreate, ModuleResponse
 from app.services.module_service import ModuleService
+from app.routers.auth import get_current_active_user
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/modules",
+    tags=["Modules"],
+    dependencies=[Depends(get_current_active_user)]   # BẢO VỆ TOÀN ROUTER
+)  
 
 @router.get("/sql")
 def get_modules(db: Session = Depends(get_db)):
