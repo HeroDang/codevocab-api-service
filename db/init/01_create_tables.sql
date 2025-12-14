@@ -40,6 +40,8 @@ CREATE TABLE modules (
     name TEXT NOT NULL,
     description TEXT,
 
+    module_type VARCHAR(20) NOT NULL DEFAULT 'personal',
+
     -- Flag cho Marketplace
     is_public BOOLEAN DEFAULT FALSE,
 
