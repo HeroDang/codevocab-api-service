@@ -15,3 +15,15 @@ class ModuleService:
         db.commit()
         db.refresh(new_module)
         return new_module
+
+    @staticmethod
+    def get_user_root_modules(db: Session, user_id):
+        return (
+            db.query(Module)
+            .filter(
+                Module.owner_id == user_id,
+                Module.parent_id.is_(None)
+            )
+            .order_by(Module.created_at.desc())
+            .all()
+        )
