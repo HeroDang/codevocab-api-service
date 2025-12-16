@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from uuid import UUID
 from typing import List
 
 from app.db import get_db
 from app.db_sql import sql
-from app.schemas.modules import ModuleCreate, ModuleOut
+from app.schemas.modules import ModuleCreate, ModuleOut, ModuleDetailOut
 from app.services.module_service import ModuleService
 from app.dependencies.authz import require_user
-from app.routers.auth import get_current_user
 from app.schemas.auth import UserInDB
 
 router = APIRouter(
@@ -32,10 +32,20 @@ def create_module(data: ModuleCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=List[ModuleOut])
 def get_modules(
-    db: Session = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     return ModuleService.get_user_root_modules(
-        db=db,
-        user_id=current_user.id
+        db=db
     )
+
+@router.get("/{module_id}", response_model=ModuleDetailOut)
+def get_module_detail(
+    module_id: UUID,
+    db: Session = Depends(get_db),
+):
+    module = ModuleService.get_module_detail(db, module_id)
+
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+
+    return module

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from datetime import datetime
+from typing import List
 from uuid import UUID
+from datetime import datetime
 
 class ModuleBase(BaseModel):
     name: str
@@ -25,6 +26,31 @@ class ModuleOut(BaseModel):
     module_type: str
     is_public: bool
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ModuleChildOut(BaseModel):
+    id: UUID
+    name: str
+    description: str = None
+    module_type: str
+    is_public: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ModuleDetailOut(BaseModel):
+    id: UUID
+    name: str
+    description: str = None
+    module_type: str
+    is_public: bool
+    created_at: datetime
+
+    children: List[ModuleChildOut] = []
 
     class Config:
         from_attributes = True
