@@ -16,3 +16,15 @@ class WordResponse(WordBase):
 
     class Config:
         orm_mode = True
+
+class WordOut(BaseModel):
+    id: UUID
+    text_en: str
+    meaning_vi: str | None = None
+    part_of_speech: str | None = None
+    ipa: str | None = None
+    example_sentence: str | None = None
+    audio_url: str | None = None
+
+    class Config:
+        from_attributes = True

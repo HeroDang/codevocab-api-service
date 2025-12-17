@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.models.modules import Module
 from app.schemas.modules import ModuleCreate
+from app.models.words import Word
+from app.models.module_word import ModuleWord
 
 class ModuleService:
 
@@ -52,3 +54,27 @@ class ModuleService:
         module.children = children
 
         return module
+
+    def get_words_by_module(
+        db: Session,
+        module_id: UUID,
+    ):
+        # 1️⃣ Check module tồn tại
+        module = (
+            db.query(Module)
+            .filter(Module.id == module_id)
+            .first()
+        )
+        if not module:
+            return None
+
+        # 2️⃣ Lấy danh sách words trong module
+        words = (
+            db.query(Word)
+            .join(ModuleWord, ModuleWord.word_id == Word.id)
+            .filter(ModuleWord.module_id == module_id)
+            .order_by(Word.text_en.asc())
+            .all()
+        )
+
+        return words

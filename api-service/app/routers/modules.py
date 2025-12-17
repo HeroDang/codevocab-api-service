@@ -5,10 +5,11 @@ from typing import List
 
 from app.db import get_db
 from app.db_sql import sql
-from app.schemas.modules import ModuleCreate, ModuleOut, ModuleDetailOut
 from app.services.module_service import ModuleService
 from app.dependencies.authz import require_user
+from app.schemas.modules import ModuleCreate, ModuleOut, ModuleDetailOut
 from app.schemas.auth import UserInDB
+from app.schemas.words import WordOut
 
 router = APIRouter(
     prefix="/modules",
@@ -49,3 +50,18 @@ def get_module_detail(
         raise HTTPException(status_code=404, detail="Module not found")
 
     return module
+
+@router.get(
+    "/{module_id}/words",
+    response_model=List[WordOut]
+)
+def get_module_words(
+    module_id: UUID,
+    db: Session = Depends(get_db),
+):
+    words = ModuleService.get_words_by_module(db, module_id)
+
+    if words is None:
+        raise HTTPException(status_code=404, detail="Module not found")
+
+    return words
