@@ -7,7 +7,7 @@ VALUES
 (gen_random_uuid(), 'user2@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Bob', NULL, user, FALSE),
 (gen_random_uuid(), 'user3@example.com', '$2b$12$FRZfuHKl60ZUxdM4Cu2RZecOy4PvRdzpJtUQcb3NilzkghheCQX7C', 'Charlie', NULL, user, FALSE)
 (gen_random_uuid(), 'admin@example.com', '12345', 'Admin', NULL, admin, FALSE)
-(gen_random_uuid(), 'user@example.com', '12345', 'User', NULL, user, FALSE)
+(gen_random_uuid(), 'rootuser@example.com', '12345', 'User', NULL, user, FALSE)
 ON CONFLICT (email) DO NOTHING;
 
 
