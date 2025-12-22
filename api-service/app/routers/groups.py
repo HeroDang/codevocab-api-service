@@ -78,25 +78,37 @@ def rename_group(
 # ==========================================================
 # Add member (OWNER)
 # ==========================================================
-@router.post("/{group_id}/members/{user_id}")
+@router.post("/{group_id}/members/{user_email}", response_model=GroupMemberOut)
 def add_member(
     group_id: UUID,
-    user_id: UUID,
+    user_email: str,
     db: Session = Depends(get_db),
     current_user = Depends(require_group_owner)
 ):
+    # Ensure group exists
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(404, "Group not found")
+
+    # Find user by email
+    user = db.query(User).filter(User.email == user_email).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    # Check existing membership
     exists = db.query(GroupMember).filter(
         GroupMember.group_id == group_id,
-        GroupMember.user_id == user_id
+        GroupMember.user_id == user.id
     ).first()
-
     if exists:
         raise HTTPException(400, "User already in group")
 
-    member = GroupMember(group_id=group_id, user_id=user_id)
+    # Create member, include user_email (model requires it)
+    member = GroupMember(group_id=group_id, user_id=user.id, user_email=user.email)
     db.add(member)
     db.commit()
-    return {"message": "Member added"}
+    db.refresh(member)
+    return member
 
 
 # ==========================================================

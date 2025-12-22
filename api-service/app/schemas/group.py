@@ -20,6 +20,7 @@ class GroupOut(GroupBase):
 class GroupMemberOut(BaseModel):
     id: UUID
     user_id: UUID
+    user_email: str
     group_id: UUID
     joined_at: datetime | None = None
 
