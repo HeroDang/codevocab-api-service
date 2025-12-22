@@ -12,6 +12,11 @@ class ModuleBase(BaseModel):
 class ModuleCreate(ModuleBase):
     owner_id: UUID
 
+class ModuleUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    is_public: bool | None = None
+
 # class ModuleOut(ModuleBase):
 #     id: UUID
 
