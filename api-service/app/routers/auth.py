@@ -12,12 +12,7 @@ from pydantic import BaseModel
 from app.db import get_db
 from app.schemas.user import UserCreate, UserOut, RegisterAndLoginResponse
 from app.schemas.auth import Token, TokenData, UserInDB
-from app.services.user_service import (
-    get_user_by_email,
-    create_user,
-    check_email_exists,
-    verify_password
-)
+from app.services.user_service import UserService
 
 # ==========================
 # Cấu hình JWT (tạm thời)
@@ -37,46 +32,7 @@ router = APIRouter(
     tags=["auth"],
 )
 
-# ==========================
-# Fake user DB (tạm thời)
-# Sau này sẽ thay bằng PostgreSQL
-# ==========================
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
 
-
-fake_users_db: Dict[str, Dict] = {
-    "hung": {
-        "username": "hung",
-        "full_name": "Hung Demo",
-        "email": "hung@example.com",
-        "hashed_password": get_password_hash("password123"),  # mật khẩu demo
-        "disabled": False,
-    }
-}
-
-
-# ==========================
-# Helpers
-# ==========================
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_user(db: Dict[str, Dict], username: str) -> Optional[UserInDB]:
-    user_dict = db.get(username)
-    if user_dict:
-        return UserInDB(**user_dict)
-    return None
-
-
-def authenticate_user(db: Dict[str, Dict], username: str, password: str) -> Optional[UserInDB]:
-    user = get_user(db, username)
-    if not user:
-        return None
-    if not verify_password(password, user.hashed_password):
-        return None
-    return user
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -108,8 +64,7 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-
-    user = get_user_by_email(db, email)
+    user = UserService.get_user_by_email(db, email)
     if not user:
         raise credentials_exception
 
@@ -134,7 +89,7 @@ async def login_for_access_token(
     email = form_data.username
     password = form_data.password
 
-    user = get_user_by_email(db, email)
+    user = UserService.get_user_by_email(db, email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -154,7 +109,7 @@ async def login_for_access_token(
     # ======================================================
 
     # 🔐 PRODUCTION MODE — verify bcrypt bình thường
-    if not verify_password(password, user.password_hash):
+    if not UserService.verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Sai mật khẩu",
@@ -174,14 +129,14 @@ async def register_user(
     db: Session = Depends(get_db)
 ):
     # Check duplicate email
-    if check_email_exists(db, user_data.email):
+    if UserService.check_email_exists(db, user_data.email):
         raise HTTPException(
             status_code=400,
             detail="Email đã tồn tại"
         )
 
     # Create user
-    new_user = create_user(db, user_data)
+    new_user = UserService.create_user(db, user_data)
 
     return new_user
 
@@ -191,14 +146,14 @@ async def register_and_login(
     db: Session = Depends(get_db)
 ):
     # Check duplicate email
-    if check_email_exists(db, user_data.email):
+    if UserService.check_email_exists(db, user_data.email):
         raise HTTPException(
             status_code=400,
             detail="Email đã tồn tại"
         )
 
     # Create user
-    new_user = create_user(db, user_data)
+    new_user = UserService.create_user(db, user_data)
 
     # Create token automatically
     access_token = create_access_token(

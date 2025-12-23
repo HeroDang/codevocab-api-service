@@ -13,6 +13,10 @@ class WordService:
         return db.query(Word).limit(limit).all()
 
     @staticmethod
+    def get_all_admin(db: Session):
+        return db.query(Word).all()
+
+    @staticmethod
     def create(db: Session, data: WordCreate):
         new_word = Word(**data.model_dump())
         db.add(new_word)
@@ -55,3 +59,8 @@ class WordService:
             LIMIT 50
         """
         return db.execute(sql(sqla), {"kw": f"%{keyword}%"}).fetchall()
+
+    @staticmethod
+    def search_by_module_admin(db: Session, module_id: UUID):
+        from app.models.module_word import ModuleWord
+        return db.query(Word).join(ModuleWord, Word.id == ModuleWord.word_id).filter(ModuleWord.module_id == module_id).all()

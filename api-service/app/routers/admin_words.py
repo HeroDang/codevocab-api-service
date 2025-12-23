@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from typing import List
 
 from app.db import get_db
 from app.dependencies.authz import require_admin
@@ -12,6 +13,25 @@ router = APIRouter(
     tags=["admin-words"],
     dependencies=[Depends(require_admin)],
 )
+
+@router.get("/", response_model=List[WordOut])
+def get_all_words_admin(
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve all words. (Admin only)
+    """
+    return WordService.get_all_admin(db)
+
+@router.get("/search/{module_id}", response_model=List[WordOut])
+def search_words_by_module_admin(
+    module_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve all words for a specific module. (Admin only)
+    """
+    return WordService.search_by_module_admin(db, module_id=module_id)
 
 @router.post("/", response_model=WordOut, status_code=status.HTTP_201_CREATED)
 def create_word(
