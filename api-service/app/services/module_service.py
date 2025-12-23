@@ -162,3 +162,44 @@ class ModuleService:
             response_data.append(module_data)
 
         return response_data
+
+    @staticmethod
+    def get_my_modules(db: Session, user_id: UUID):
+        word_count_subquery = (
+            db.query(
+                ModuleWord.module_id,
+                func.count(ModuleWord.word_id).label("word_count"),
+            )
+            .group_by(ModuleWord.module_id)
+            .subquery()
+        )
+
+        results = (
+            db.query(
+                Module,
+                User.name.label("owner_name"),
+                word_count_subquery.c.word_count.label("count_word"),
+            )
+            .join(User, User.id == Module.owner_id)
+            .outerjoin(
+                word_count_subquery, word_count_subquery.c.module_id == Module.id
+            )
+            .filter(Module.owner_id == user_id, Module.module_type == "personal")
+            .all()
+        )
+
+        response_data = []
+        for module, owner_name, count_word in results:
+            module_data = {
+                "id": module.id,
+                "name": module.name,
+                "description": module.description,
+                "module_type": module.module_type,
+                "is_public": module.is_public,
+                "created_at": module.created_at,
+                "owner_name": owner_name,
+                "count_word": count_word or 0,
+            }
+            response_data.append(module_data)
+
+        return response_data

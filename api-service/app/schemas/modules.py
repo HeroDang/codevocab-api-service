@@ -40,6 +40,11 @@ class MarketModuleOut(ModuleOut):
     count_word: int
 
 
+class MyModuleOut(ModuleOut):
+    owner_name: str | None
+    count_word: int
+
+
 class ModuleChildOut(BaseModel):
     id: UUID
     name: str
