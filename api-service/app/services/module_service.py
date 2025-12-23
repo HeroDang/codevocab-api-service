@@ -1,9 +1,11 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException, status
+from sqlalchemy import func
 
 from app.models.modules import Module
 from app.schemas.modules import ModuleCreate
+from app.models.user import User
 from app.models.words import Word
 from app.models.module_word import ModuleWord
 from app.schemas.modules import ModuleUpdate
@@ -119,3 +121,44 @@ class ModuleService:
             query = query.filter(Module.module_type == module_type)
 
         return query.order_by(Module.created_at.desc()).all()
+
+    @staticmethod
+    def get_public_modules(db: Session, user_id: UUID):
+        word_count_subquery = (
+            db.query(
+                ModuleWord.module_id,
+                func.count(ModuleWord.word_id).label("word_count"),
+            )
+            .group_by(ModuleWord.module_id)
+            .subquery()
+        )
+
+        results = (
+            db.query(
+                Module,
+                User.name.label("owner_name"),
+                word_count_subquery.c.word_count.label("count_word"),
+            )
+            .join(User, User.id == Module.owner_id)
+            .join(
+                word_count_subquery, word_count_subquery.c.module_id == Module.id
+            )
+            .filter(Module.is_public == True, Module.owner_id != user_id)
+            .all()
+        )
+
+        response_data = []
+        for module, owner_name, count_word in results:
+            module_data = {
+                "id": module.id,
+                "name": module.name,
+                "description": module.description,
+                "module_type": module.module_type,
+                "is_public": module.is_public,
+                "created_at": module.created_at,
+                "owner_name": owner_name,
+                "count_word": count_word,
+            }
+            response_data.append(module_data)
+
+        return response_data

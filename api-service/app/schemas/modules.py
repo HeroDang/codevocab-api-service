@@ -35,6 +35,11 @@ class ModuleOut(BaseModel):
     class Config:
         from_attributes = True
 
+class MarketModuleOut(ModuleOut):
+    owner_name: str | None
+    count_word: int
+
+
 class ModuleChildOut(BaseModel):
     id: UUID
     name: str

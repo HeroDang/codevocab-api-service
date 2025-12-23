@@ -5,10 +5,11 @@ from typing import List, Optional
 
 from app.db import get_db
 from app.db_sql import sql
-from app.schemas.modules import ModuleOut, ModuleUpdate
+from app.schemas.modules import MarketModuleOut, ModuleOut, ModuleUpdate
+from app.models.modules import Module
 from app.services.module_service import ModuleService
 from app.dependencies.authz import require_user
-from app.schemas.modules import ModuleCreate, ModuleOut, ModuleDetailOut
+from app.schemas.modules import ModuleCreate, ModuleDetailOut
 from app.schemas.auth import UserInDB
 from app.schemas.words import WordOut
 from app.routers.auth import get_current_user
@@ -56,6 +57,13 @@ def get_user_modules(
         user_id=current_user_id,
         module_type=module_type
     )
+
+@router.get("/market", response_model=List[MarketModuleOut])
+def get_market_modules(
+    db: Session = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    return ModuleService.get_public_modules(db, current_user.id)
 
 @router.get("/{module_id}", response_model=ModuleDetailOut)
 def get_module_detail(
