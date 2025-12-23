@@ -11,6 +11,13 @@ class WordBase(BaseModel):
 class WordCreate(WordBase):
     pass
 
+class WordUpdate(BaseModel):
+    text_en: str | None = None
+    meaning_vi: str | None = None
+    part_of_speech: str | None = None
+    ipa: str | None = None
+    example_sentence: str | None = None
+
 class WordResponse(WordBase):
     id: UUID
 
