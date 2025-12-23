@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from datetime import date, datetime, timedelta
+from sqlalchemy import func
 
 from app.models.user import User
 from app.schemas.user import UserCreate
@@ -42,4 +44,19 @@ class UserService:
     @staticmethod
     def get_users_by_role(db: Session, role: str):
         return db.query(User).filter(User.role == role).all()
+
+    @staticmethod
+    def count_all_users(db: Session) -> int:
+        return db.query(User).count()
+
+    @staticmethod
+    def count_users_registered_today(db: Session) -> int:
+        today = date.today()
+        return db.query(User).filter(func.date(User.created_at) == today).count()
+
+    @staticmethod
+    def count_users_registered_last_n_days(db: Session, days: int) -> int:
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+        return db.query(User).filter(User.created_at.between(start_date, end_date)).count()
 

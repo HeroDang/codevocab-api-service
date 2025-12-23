@@ -20,3 +20,31 @@ def get_user_accounts(db: Session = Depends(get_db)):
     """
     users = UserService.get_users_by_role(db, role="user")
     return users
+
+@router.get("/count/total", response_model=int)
+def count_total_users(db: Session = Depends(get_db)):
+    """
+    Get the total number of users. (Admin only)
+    """
+    return UserService.count_all_users(db)
+
+@router.get("/count/today", response_model=int)
+def count_users_today(db: Session = Depends(get_db)):
+    """
+    Get the number of users registered today. (Admin only)
+    """
+    return UserService.count_users_registered_today(db)
+
+@router.get("/count/last-week", response_model=int)
+def count_users_last_week(db: Session = Depends(get_db)):
+    """
+    Get the number of users registered in the last 7 days. (Admin only)
+    """
+    return UserService.count_users_registered_last_n_days(db, days=7)
+
+@router.get("/count/last-month", response_model=int)
+def count_users_last_month(db: Session = Depends(get_db)):
+    """
+    Get the number of users registered in the last 30 days. (Admin only)
+    """
+    return UserService.count_users_registered_last_n_days(db, days=30)
