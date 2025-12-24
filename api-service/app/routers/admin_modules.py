@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List, Optional
 
 from app.db import get_db
-from app.dependencies.authz import require_admin
-from app.models.modules import Module
+from app.dependencies.authz import get_current_user, require_admin
+from app.models.user import User
 from app.schemas.modules import ModuleCreate, ModuleOut, ModuleUpdate
 from app.schemas.words import WordOut
 from app.services.module_service import ModuleService
@@ -23,29 +23,12 @@ router = APIRouter(
 @router.get("/", response_model=list[ModuleOut])
 def get_all_modules(
     db: Session = Depends(get_db),
-    owner_id: Optional[UUID] = None,
-    parent_id: Optional[UUID] = None,
     name: Optional[str] = None,
-    module_type: Optional[str] = None,
-    is_public: Optional[bool] = None,
 ):
     """
     Retrieve all modules with optional filters. (Admin only)
     """
-    query = db.query(Module)
-
-    if owner_id:
-        query = query.filter(Module.owner_id == owner_id)
-    if parent_id:
-        query = query.filter(Module.parent_id == parent_id)
-    if name:
-        query = query.filter(Module.name.ilike(f"%{name}%"))
-    if module_type:
-        query = query.filter(Module.module_type == module_type)
-    if is_public is not None:
-        query = query.filter(Module.is_public == is_public)
-        
-    return query.all()
+    return ModuleService.get_all_for_admin(db, name=name)
 
 
 # ==========================================================
@@ -67,11 +50,7 @@ def get_words_by_module_admin(
 # ==========================================================
 @router.post("/", response_model=ModuleOut, status_code=201)
 def create_module(data: ModuleCreate, db: Session = Depends(get_db)):
-    new_module = Module(**data.model_dump())
-    db.add(new_module)
-    db.commit()
-    db.refresh(new_module)
-    return new_module
+    return ModuleService.create_for_admin(db, data)
 
 
 # ==========================================================
@@ -83,27 +62,27 @@ def update_module(
     data: ModuleUpdate,
     db: Session = Depends(get_db),
 ):
-    module = db.query(Module).filter(Module.id == module_id).first()
-    if not module:
-        raise HTTPException(status_code=404, detail="Module not found")
-
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(module, key, value)
-
-    db.commit()
-    db.refresh(module)
-    return module
+    return ModuleService.update_for_admin(db, module_id, data)
 
 
 # ==========================================================
 # DELETE — Admin xoá module hệ thống
 # ==========================================================
-@router.delete("/{module_id}", status_code=204)
-def delete_module(module_id: UUID, db: Session = Depends(get_db)):
-    module = db.query(Module).filter(Module.id == module_id).first()
-    if not module:
-        raise HTTPException(status_code=404, detail="Module not found")
+@router.delete("/{module_id}", status_code=200)
+def delete_module(
+    module_id: UUID, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return ModuleService.delete(db, module_id, current_user.id)
 
-    db.delete(module)
-    db.commit()
-    return
+# ==========================================================
+# RESTORE — Admin khôi phục module hệ thống
+# ==========================================================
+@router.post("/{module_id}/restore", response_model=ModuleOut)
+def restore_module(
+    module_id: UUID,
+    db: Session = Depends(get_db),
+):
+    return ModuleService.restore_for_admin(db, module_id)
+

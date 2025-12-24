@@ -9,12 +9,70 @@ from app.models.user import User
 from app.models.words import Word
 from app.models.module_word import ModuleWord
 from app.schemas.modules import ModuleUpdate
+from app.models.module_delete import ModuleDelete
+import datetime
 
 class ModuleService:
 
     @staticmethod
+    def get_all_for_admin(db: Session, name: str | None = None):
+        query = db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+        
+        if name:
+            query = query.filter(Module.name.ilike(f"%{name}%"))
+        
+        deleted_modules = query.filter(ModuleDelete.module_id != None).all()
+        non_deleted_modules = query.filter(ModuleDelete.module_id == None).all()
+        
+        return non_deleted_modules + deleted_modules
+
+    @staticmethod
+    def create_for_admin(db: Session, data: ModuleCreate):
+        existing_module = db.query(Module).filter(Module.name == data.name).first()
+        if existing_module:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
+        
+        new_module = Module(**data.model_dump())
+        db.add(new_module)
+        db.commit()
+        db.refresh(new_module)
+        return new_module
+
+    @staticmethod
+    def update_for_admin(db: Session, module_id: UUID, data: ModuleUpdate):
+        module = db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id).filter(Module.id == module_id, ModuleDelete.module_id.is_(None)).first()
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found or has been deleted")
+
+        existing_module = db.query(Module).filter(Module.name == data.name, Module.id != module_id).first()
+        if existing_module:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
+
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(module, key, value)
+
+        db.commit()
+        db.refresh(module)
+        return module
+
+    @staticmethod
+    def restore_for_admin(db: Session, module_id: UUID):
+        module = db.query(Module).filter(Module.id == module_id).first()
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
+
+        deleted_entry = db.query(ModuleDelete).filter(ModuleDelete.module_id == module_id).first()
+        if not deleted_entry:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Module is not deleted")
+
+        db.delete(deleted_entry)
+        db.commit()
+
+        return module
+    
+    @staticmethod
     def get_all(db: Session):
-        return db.query(Module).all()
+        return db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id).filter(ModuleDelete.module_id.is_(None)).all()
 
     @staticmethod
     def create(db: Session, data: ModuleCreate):
@@ -24,7 +82,7 @@ class ModuleService:
     @staticmethod
     # def update_module(db: Session, module_id: UUID, data: ModuleUpdate, user_id: UUID):
     def update_module(db: Session, module_id: UUID, data: ModuleUpdate):
-        module = db.query(Module).filter(Module.id == module_id).first()
+        module = db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id).filter(Module.id == module_id, ModuleDelete.module_id.is_(None)).first()
         
         if not module:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
@@ -44,11 +102,35 @@ class ModuleService:
         return module
 
     @staticmethod
+    def delete(db: Session, module_id: UUID, user_id: UUID):
+        module = db.query(Module).filter(Module.id == module_id).first()
+        
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
+            
+        if module.owner_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this module")
+            
+        existing_delete = db.query(ModuleDelete).filter(ModuleDelete.module_id == module_id).first()
+        if existing_delete:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Module already deleted")
+            
+        module.deleted_at = datetime.datetime.utcnow()
+        
+        new_module_delete = ModuleDelete(module_id=module_id, user_id=user_id)
+        db.add(new_module_delete)
+        
+        db.commit()
+        return {"message": "Module deleted successfully"}
+
+    @staticmethod
     def get_user_root_modules(db: Session):
         return (
             db.query(Module)
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
             .filter(
-                Module.parent_id.is_(None)
+                Module.parent_id.is_(None),
+                ModuleDelete.module_id.is_(None)
             )
             .order_by(Module.created_at.desc())
             .all()
@@ -59,7 +141,8 @@ class ModuleService:
         # 1️⃣ Lấy module cha
         module = (
             db.query(Module)
-            .filter(Module.id == module_id)
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .filter(Module.id == module_id, ModuleDelete.module_id.is_(None))
             .first()
         )
 
@@ -69,7 +152,8 @@ class ModuleService:
         # 2️⃣ Lấy module con
         children = (
             db.query(Module)
-            .filter(Module.parent_id == module.id)
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .filter(Module.parent_id == module.id, ModuleDelete.module_id.is_(None))
             .order_by(Module.created_at.asc())
             .all()
         )
@@ -87,7 +171,8 @@ class ModuleService:
         # 1️⃣ Check module tồn tại
         module = (
             db.query(Module)
-            .filter(Module.id == module_id)
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .filter(Module.id == module_id, ModuleDelete.module_id.is_(None))
             .first()
         )
         if not module:
@@ -112,8 +197,10 @@ class ModuleService:
     ):
         query = (
             db.query(Module)
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
             .filter(
-                Module.owner_id == user_id
+                Module.owner_id == user_id,
+                ModuleDelete.module_id.is_(None)
             )
         )
 
@@ -143,7 +230,8 @@ class ModuleService:
             .join(
                 word_count_subquery, word_count_subquery.c.module_id == Module.id
             )
-            .filter(Module.is_public == True, Module.owner_id != user_id)
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .filter(Module.is_public == True, Module.owner_id != user_id, ModuleDelete.module_id.is_(None))
             .all()
         )
 
@@ -184,7 +272,8 @@ class ModuleService:
             .outerjoin(
                 word_count_subquery, word_count_subquery.c.module_id == Module.id
             )
-            .filter(Module.owner_id == user_id, Module.module_type == "personal")
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .filter(Module.owner_id == user_id, Module.module_type == "personal", ModuleDelete.module_id.is_(None))
             .all()
         )
 

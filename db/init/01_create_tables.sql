@@ -45,7 +45,8 @@ CREATE TABLE modules (
     -- Flag cho Marketplace
     is_public BOOLEAN DEFAULT FALSE,
 
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    deleted_at TIMESTAMP
 );
 
 -----------------------------------------------------------
@@ -59,7 +60,8 @@ CREATE TABLE words (
     ipa TEXT,                     -- NEW: IPA pronunciation
     example_sentence TEXT,
     audio_url TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    deleted_at TIMESTAMP
 );
 
 -----------------------------------------------------------
@@ -180,4 +182,24 @@ CREATE TABLE quiz_answers (
     user_answer TEXT,
     correct_answer TEXT,
     is_correct BOOLEAN
+);
+
+-----------------------------------------------------------
+-- 16. MODULE DELETES
+-----------------------------------------------------------
+CREATE TABLE module_deletes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    module_id UUID REFERENCES modules(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    deleted_at TIMESTAMP DEFAULT NOW()
+);
+
+-----------------------------------------------------------
+-- 17. WORD DELETES
+-----------------------------------------------------------
+CREATE TABLE word_deletes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    word_id UUID REFERENCES words(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    deleted_at TIMESTAMP DEFAULT NOW()
 );

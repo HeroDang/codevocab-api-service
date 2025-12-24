@@ -5,16 +5,18 @@ from fastapi import HTTPException
 from app.db_sql import sql
 from app.models.words import Word
 from app.schemas.words import WordCreate, WordUpdate
+from app.models.word_delete import WordDelete
+import datetime
 
 class WordService:
 
     @staticmethod
     def get_all(db: Session, limit: int = 50):
-        return db.query(Word).limit(limit).all()
+        return db.query(Word).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(WordDelete.word_id.is_(None)).limit(limit).all()
 
     @staticmethod
     def get_all_admin(db: Session):
-        return db.query(Word).all()
+        return db.query(Word).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(WordDelete.word_id.is_(None)).all()
 
     @staticmethod
     def create(db: Session, data: WordCreate):
@@ -26,7 +28,7 @@ class WordService:
 
     @staticmethod
     def update(db: Session, word_id: UUID, data: WordUpdate):
-        word = db.query(Word).filter(Word.id == word_id).first()
+        word = db.query(Word).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(Word.id == word_id, WordDelete.word_id.is_(None)).first()
         if not word:
             raise HTTPException(status_code=404, detail="Word not found")
 
@@ -38,23 +40,33 @@ class WordService:
         return word
 
     @staticmethod
-    def delete(db: Session, word_id: UUID):
-        word = db.query(Word).filter(Word.id == word_id).first()
+    def delete(db: Session, word_id: UUID, user_id: UUID):
+        word = db.query(Word).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(Word.id == word_id, WordDelete.word_id.is_(None)).first()
         if not word:
             raise HTTPException(status_code=404, detail="Word not found")
+            
+        existing_delete = db.query(WordDelete).filter(WordDelete.word_id == word_id).first()
+        if existing_delete:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Word already deleted")
 
-        db.delete(word)
+        word.deleted_at = datetime.datetime.utcnow()
+        
+        new_word_delete = WordDelete(word_id=word_id, user_id=user_id)
+        db.add(new_word_delete)
+        
         db.commit()
-        return
+        return {"message": "Word deleted successfully"}
 
     @staticmethod
     def search_complex(db, keyword: str):
         sqla = """
             SELECT w.id, w.text_en, w.ipa, w.meaning_vi 
             FROM words w
-            WHERE w.text_en ILIKE :kw 
+            LEFT OUTER JOIN word_deletes wd ON w.id = wd.word_id
+            WHERE (w.text_en ILIKE :kw 
                OR w.meaning_vi ILIKE :kw
-               OR w.ipa ILIKE :kw
+               OR w.ipa ILIKE :kw)
+               AND wd.word_id IS NULL
             ORDER BY w.text_en
             LIMIT 50
         """
@@ -63,4 +75,4 @@ class WordService:
     @staticmethod
     def search_by_module_admin(db: Session, module_id: UUID):
         from app.models.module_word import ModuleWord
-        return db.query(Word).join(ModuleWord, Word.id == ModuleWord.word_id).filter(ModuleWord.module_id == module_id).all()
+        return db.query(Word).join(ModuleWord, Word.id == ModuleWord.word_id).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(ModuleWord.module_id == module_id, WordDelete.word_id.is_(None)).all()

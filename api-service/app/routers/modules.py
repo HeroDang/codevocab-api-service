@@ -23,7 +23,7 @@ router = APIRouter(
 
 @router.get("/sql")
 def get_modules(db: Session = Depends(get_db)):
-    result = db.execute(sql("SELECT id, name, parent_id FROM modules;"))
+    result = db.execute(sql("SELECT m.id, m.name, m.parent_id FROM modules m LEFT OUTER JOIN module_deletes md ON m.id = md.module_id WHERE md.module_id IS NULL;"))
     data = [{"id": str(r[0]), "name": r[1], "parent_id": str(r[2]) if r[2] else None} for r in result]
     return {"modules": data}
 
@@ -84,6 +84,14 @@ def update_module(
 ):
     # return ModuleService.update_module(db, module_id, module_data, current_user.id)
     return ModuleService.update_module(db, module_id, module_data)
+
+@router.delete("/{module_id}")
+def delete_module(
+    module_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    return ModuleService.delete(db, module_id, current_user.id)
 
 @router.get(
     "/{module_id}/words",

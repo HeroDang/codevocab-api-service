@@ -54,13 +54,15 @@ def update_word(
     """
     return WordService.update(db, word_id, data)
 
-@router.delete("/{word_id}", status_code=status.HTTP_204_NO_CONTENT)
+from app.schemas.auth import UserInDB
+
+@router.delete("/{word_id}", status_code=status.HTTP_200_OK)
 def delete_word(
     word_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserInDB = Depends(require_admin)
 ):
     """
     Delete a word. (Admin only)
     """
-    WordService.delete(db, word_id)
-    return
+    return WordService.delete(db, word_id, current_user.id)

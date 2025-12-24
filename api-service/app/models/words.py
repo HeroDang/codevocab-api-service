@@ -17,3 +17,4 @@ class Word(Base):
     example_sentence = Column(Text)
     audio_url = Column(String)
     created_at = Column(DateTime, server_default=func.now())
+    deleted_at = Column(DateTime, nullable=True)
