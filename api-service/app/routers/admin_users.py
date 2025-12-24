@@ -7,6 +7,8 @@ from app.dependencies.authz import require_admin
 from app.schemas.user import UserOut
 from app.services.user_service import UserService
 
+from app.schemas.user_analytics import UserCountByMonth
+
 router = APIRouter(
     prefix="/admin/users",
     tags=["admin-users"],
@@ -48,3 +50,10 @@ def count_users_last_month(db: Session = Depends(get_db)):
     Get the number of users registered in the last 30 days. (Admin only)
     """
     return UserService.count_users_registered_last_n_days(db, days=30)
+
+@router.get("/count/by-month", response_model=List[UserCountByMonth])
+def count_users_by_month(db: Session = Depends(get_db)):
+    """
+    Get the number of users registered by month for the current year. (Admin only)
+    """
+    return UserService.count_users_by_month_current_year(db)

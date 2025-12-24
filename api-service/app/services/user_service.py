@@ -60,3 +60,29 @@ class UserService:
         start_date = end_date - timedelta(days=days)
         return db.query(User).filter(User.created_at.between(start_date, end_date)).count()
 
+    @staticmethod
+    def count_users_by_month_current_year(db: Session):
+        current_year = datetime.now().year
+        
+        results = (
+            db.query(
+                func.extract("month", User.created_at).label("month"),
+                func.count(User.id).label("count"),
+            )
+            .filter(func.extract("year", User.created_at) == current_year)
+            .group_by(func.extract("month", User.created_at))
+            .order_by(func.extract("month", User.created_at))
+            .all()
+        )
+        
+        # Initialize counts for all months up to the current month
+        current_month = datetime.now().month
+        user_counts = [{"month": i, "count": 0} for i in range(1, current_month + 1)]
+
+        for row in results:
+            month_index = int(row.month) - 1
+            if month_index < len(user_counts):
+                user_counts[month_index]["count"] = row.count
+        
+        return user_counts
+
