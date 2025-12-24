@@ -168,6 +168,7 @@ class ModuleService:
         db: Session,
         module_id: UUID,
     ):
+        from app.models.word_delete import WordDelete
         # 1️⃣ Check module tồn tại
         module = (
             db.query(Module)
@@ -182,7 +183,9 @@ class ModuleService:
         words = (
             db.query(Word)
             .join(ModuleWord, ModuleWord.word_id == Word.id)
+            .outerjoin(WordDelete, Word.id == WordDelete.word_id)
             .filter(ModuleWord.module_id == module_id)
+            .filter(WordDelete.word_id.is_(None))
             .order_by(Word.text_en.asc())
             .all()
         )
@@ -211,11 +214,15 @@ class ModuleService:
 
     @staticmethod
     def get_public_modules(db: Session, user_id: UUID):
+        from app.models.word_delete import WordDelete
         word_count_subquery = (
             db.query(
                 ModuleWord.module_id,
                 func.count(ModuleWord.word_id).label("word_count"),
             )
+            .join(Word, Word.id == ModuleWord.word_id)
+            .outerjoin(WordDelete, Word.id == WordDelete.word_id)
+            .filter(WordDelete.word_id.is_(None))
             .group_by(ModuleWord.module_id)
             .subquery()
         )
@@ -253,11 +260,15 @@ class ModuleService:
 
     @staticmethod
     def get_my_modules(db: Session, user_id: UUID):
+        from app.models.word_delete import WordDelete
         word_count_subquery = (
             db.query(
                 ModuleWord.module_id,
                 func.count(ModuleWord.word_id).label("word_count"),
             )
+            .join(Word, Word.id == ModuleWord.word_id)
+            .outerjoin(WordDelete, Word.id == WordDelete.word_id)
+            .filter(WordDelete.word_id.is_(None))
             .group_by(ModuleWord.module_id)
             .subquery()
         )

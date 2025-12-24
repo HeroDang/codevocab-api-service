@@ -8,6 +8,9 @@ from app.schemas.words import WordCreate, WordUpdate
 from app.models.word_delete import WordDelete
 import datetime
 
+from app.models.module_word import ModuleWord
+from app.schemas.words import WordCreate, WordUpdate, WordListCreate
+
 class WordService:
 
     @staticmethod
@@ -25,6 +28,24 @@ class WordService:
         db.commit()
         db.refresh(new_word)
         return new_word
+
+    @staticmethod
+    def create_words_with_module(db: Session, data: WordListCreate):
+        new_words = []
+        for word_data in data.words:
+            new_word = Word(**word_data.model_dump())
+            db.add(new_word)
+            db.flush()  # Flush to get the new_word.id
+
+            module_word = ModuleWord(module_id=data.module_id, word_id=new_word.id)
+            db.add(module_word)
+            new_words.append(new_word)
+
+        db.commit()
+        for word in new_words:
+            db.refresh(word)
+            
+        return new_words
 
     @staticmethod
     def update(db: Session, word_id: UUID, data: WordUpdate):

@@ -35,3 +35,7 @@ class WordOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class WordListCreate(BaseModel):
+    module_id: UUID
+    words: list[WordCreate]
