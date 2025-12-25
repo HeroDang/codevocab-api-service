@@ -14,6 +14,20 @@ services:
       - db_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
 
+  postgres_test:
+    image: postgres:15
+    container_name: postgres_db_test
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: appdb_test
+    ports:
+      - "5433:5432"              # ⚠️ PORT KHÁC
+    volumes:
+      - db_test_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d   # dùng chung init
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
@@ -23,6 +37,8 @@ services:
       PGADMIN_DEFAULT_PASSWORD: 123456
     ports:
       - "8080:80"
+    volumes:
+      - ./pgadmin_backup:/var/lib/pgadmin 
   
   api-service:                              # <<< SERVICE A MỚI
     build: ./api-service                    # Dockerfile nằm trong folder api-service
@@ -38,3 +54,4 @@ services:
 
 volumes:
   db_data:
+  db_test_data:
