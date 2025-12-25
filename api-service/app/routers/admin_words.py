@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from app.db import get_db
 from app.dependencies.authz import require_admin
@@ -15,23 +15,15 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[WordOut])
-def get_all_words_admin(
-    db: Session = Depends(get_db)
+def search_words_admin(
+    db: Session = Depends(get_db),
+    module_id: Optional[UUID] = Query(None, description="Filter words by module ID"),
+    user_id: Optional[UUID] = Query(None, description="Filter words by user ID (owner of the module)")
 ):
     """
-    Retrieve all words. (Admin only)
+    Retrieve all words, with optional filtering by module_id and user_id. (Admin only)
     """
-    return WordService.get_all_admin(db)
-
-@router.get("/search/{module_id}", response_model=List[WordOut])
-def search_words_by_module_admin(
-    module_id: UUID,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve all words for a specific module. (Admin only)
-    """
-    return WordService.search_by_module_admin(db, module_id=module_id)
+    return WordService.search_words_admin(db, module_id=module_id, user_id=user_id)
 
 @router.post("/", response_model=WordOut, status_code=status.HTTP_201_CREATED)
 def create_word(

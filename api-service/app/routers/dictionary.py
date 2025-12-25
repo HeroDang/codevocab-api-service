@@ -6,7 +6,7 @@ from typing import List
 from app.db import get_db
 from app.services.module_service import ModuleService
 from app.dependencies.authz import require_user
-from app.schemas.modules import MyModuleOut
+from app.schemas.modules import MyModuleOut, ModuleOut
 from app.schemas.auth import UserInDB
 from app.routers.auth import get_current_user
 from app.services.module_share_service import ModuleShareService
@@ -61,3 +61,15 @@ def accept_share(
     Accept a module share request.
     """
     return ModuleShareService.accept_share(db, module_id=module_id, user_id=current_user.id)
+
+@router.put("/publish/{module_id}", response_model=ModuleOut)
+def publish_module(
+    module_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_user),
+):
+    """
+    Publish a module to make it public.
+    """
+    return ModuleService.publish_module(db, module_id=module_id, user_id=current_user.id)
+

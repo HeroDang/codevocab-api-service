@@ -4,11 +4,12 @@ from fastapi import HTTPException
 
 from app.db_sql import sql
 from app.models.words import Word
+from app.models.modules import Module
+from app.models.module_word import ModuleWord
 from app.schemas.words import WordCreate, WordUpdate
 from app.models.word_delete import WordDelete
 import datetime
 
-from app.models.module_word import ModuleWord
 from app.schemas.words import WordCreate, WordUpdate, WordListCreate
 
 class WordService:
@@ -20,6 +21,24 @@ class WordService:
     @staticmethod
     def get_all_admin(db: Session):
         return db.query(Word).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(WordDelete.word_id.is_(None)).all()
+
+    @staticmethod
+    def search_words_admin(db: Session, module_id: UUID | None = None, user_id: UUID | None = None):
+        query = db.query(Word).outerjoin(WordDelete, Word.id == WordDelete.word_id).filter(WordDelete.word_id.is_(None))
+
+        if module_id and user_id:
+            query = query.join(ModuleWord, Word.id == ModuleWord.word_id) \
+                         .join(Module, Module.id == ModuleWord.module_id) \
+                         .filter(Module.id == module_id) \
+                         .filter(Module.owner_id == user_id)
+        elif module_id:
+            query = query.join(ModuleWord, Word.id == ModuleWord.word_id).filter(ModuleWord.module_id == module_id)
+        elif user_id:
+            query = query.join(ModuleWord, Word.id == ModuleWord.word_id) \
+                         .join(Module, Module.id == ModuleWord.module_id) \
+                         .filter(Module.owner_id == user_id)
+
+        return query.distinct().all()
 
     @staticmethod
     def create(db: Session, data: WordCreate):

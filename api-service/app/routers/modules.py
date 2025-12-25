@@ -9,7 +9,7 @@ from app.schemas.modules import MarketModuleOut, ModuleOut, ModuleUpdate
 from app.models.modules import Module
 from app.services.module_service import ModuleService
 from app.dependencies.authz import require_user
-from app.schemas.modules import ModuleCreate, ModuleDetailOut
+from app.schemas.modules import ModuleCreate, ModuleDetailOut, ModuleBase
 from app.schemas.auth import UserInDB
 from app.schemas.words import WordOut
 from app.routers.auth import get_current_user
@@ -32,8 +32,9 @@ def list_modules(db: Session = Depends(get_db)):
     return ModuleService.get_all(db)
 
 @router.post("/", response_model=ModuleOut)
-def create_module(data: ModuleCreate, db: Session = Depends(get_db)):
-    return ModuleService.create(db, data)
+def create_module(data: ModuleBase, db: Session = Depends(get_db), current_user: UserInDB = Depends(get_current_user)):
+    module_create_data = ModuleCreate(**data.model_dump(), owner_id=current_user.id)
+    return ModuleService.create(db, module_create_data)
 
 @router.get("", response_model=List[ModuleOut])
 def get_modules(

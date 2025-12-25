@@ -78,6 +78,9 @@ class ModuleService:
     def create(db: Session, data: ModuleCreate):
         new_module = Module(**data.model_dump())
         db.add(new_module)
+        db.commit()
+        db.refresh(new_module)
+        return new_module
 
     @staticmethod
     # def update_module(db: Session, module_id: UUID, data: ModuleUpdate, user_id: UUID):
@@ -96,6 +99,22 @@ class ModuleService:
             module.description = data.description
         if data.is_public is not None:
             module.is_public = data.is_public
+            
+        db.commit()
+        db.refresh(module)
+        return module
+
+    @staticmethod
+    def publish_module(db: Session, module_id: UUID, user_id: UUID):
+        module = db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id).filter(Module.id == module_id, ModuleDelete.module_id.is_(None)).first()
+        
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
+            
+        if module.owner_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to publish this module")
+            
+        module.is_public = True
             
         db.commit()
         db.refresh(module)
@@ -130,6 +149,7 @@ class ModuleService:
             .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
             .filter(
                 Module.parent_id.is_(None),
+                Module.module_type == "system",
                 ModuleDelete.module_id.is_(None)
             )
             .order_by(Module.created_at.desc())
@@ -280,7 +300,7 @@ class ModuleService:
                 word_count_subquery.c.word_count.label("count_word"),
             )
             .join(User, User.id == Module.owner_id)
-            .outerjoin(
+            .join(
                 word_count_subquery, word_count_subquery.c.module_id == Module.id
             )
             .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
