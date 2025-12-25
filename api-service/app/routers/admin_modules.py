@@ -6,7 +6,7 @@ from typing import List, Optional
 from app.db import get_db
 from app.dependencies.authz import get_current_user, require_admin
 from app.models.user import User
-from app.schemas.modules import ModuleCreate, ModuleOut, ModuleUpdate
+from app.schemas.modules import ModuleCreate, ModuleOut, ModuleUpdate, MarketModuleOut
 from app.schemas.words import WordOut
 from app.services.module_service import ModuleService
 
@@ -20,7 +20,7 @@ router = APIRouter(
 # ==========================================================
 # GET ALL — Admin xem tất cả module hệ thống
 # ==========================================================
-@router.get("/", response_model=list[ModuleOut])
+@router.get("/", response_model=list[MarketModuleOut])
 def get_all_modules(
     db: Session = Depends(get_db),
     name: Optional[str] = None,

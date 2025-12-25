@@ -16,15 +16,53 @@ class ModuleService:
 
     @staticmethod
     def get_all_for_admin(db: Session, name: str | None = None):
-        query = db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
-        
+        from app.models.word_delete import WordDelete
+        word_count_subquery = (
+            db.query(
+                ModuleWord.module_id,
+                func.count(ModuleWord.word_id).label("word_count"),
+            )
+            .join(Word, Word.id == ModuleWord.word_id)
+            .outerjoin(WordDelete, Word.id == WordDelete.word_id)
+            .filter(WordDelete.word_id.is_(None))
+            .group_by(ModuleWord.module_id)
+            .subquery()
+        )
+
+        query = (
+            db.query(
+                Module,
+                User.name.label("owner_name"),
+                word_count_subquery.c.word_count.label("count_word"),
+            )
+            .join(User, User.id == Module.owner_id)
+            .join(
+                word_count_subquery, word_count_subquery.c.module_id == Module.id
+            )
+            .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .filter(ModuleDelete.module_id.is_(None))
+        )
+
         if name:
             query = query.filter(Module.name.ilike(f"%{name}%"))
-        
-        deleted_modules = query.filter(ModuleDelete.module_id != None).all()
-        non_deleted_modules = query.filter(ModuleDelete.module_id == None).all()
-        
-        return non_deleted_modules + deleted_modules
+
+        results = query.all()
+
+        response_data = []
+        for module, owner_name, count_word in results:
+            module_data = {
+                "id": module.id,
+                "name": module.name,
+                "description": module.description,
+                "module_type": module.module_type,
+                "is_public": module.is_public,
+                "created_at": module.created_at,
+                "owner_name": owner_name,
+                "count_word": count_word or 0,
+            }
+            response_data.append(module_data)
+
+        return response_data
 
     @staticmethod
     def create_for_admin(db: Session, data: ModuleCreate):
@@ -169,19 +207,44 @@ class ModuleService:
         if not module:
             return None
 
-        # 2️⃣ Lấy module con
-        children = (
-            db.query(Module)
+        # a. subquery to count words in modules
+        from app.models.word_delete import WordDelete
+        word_count_subquery = (
+            db.query(
+                ModuleWord.module_id,
+                func.count(ModuleWord.word_id).label("word_count"),
+            )
+            .join(Word, Word.id == ModuleWord.word_id)
+            .outerjoin(WordDelete, Word.id == WordDelete.word_id)
+            .filter(WordDelete.word_id.is_(None))
+            .group_by(ModuleWord.module_id)
+            .subquery()
+        )
+
+        # 2️⃣ Lấy module con and their word counts
+        children_results = (
+            db.query(
+                Module,
+                word_count_subquery.c.word_count.label("count_word")
+            )
             .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
+            .outerjoin(word_count_subquery, Module.id == word_count_subquery.c.module_id)
             .filter(Module.parent_id == module.id, ModuleDelete.module_id.is_(None))
             .order_by(Module.created_at.asc())
             .all()
         )
+        
+        children_with_counts = []
+        total_word_count = 0
+        for child_module, count in children_results:
+            child_module.count_word = count or 0
+            children_with_counts.append(child_module)
+            total_word_count += (count or 0)
 
-        # 3️⃣ Gắn children
-        module.children = children
+        # 3️⃣ Gắn children và total word count
+        module.children = children_with_counts
+        module.count_word = total_word_count
 
-        db.refresh(module)
         return module
 
     def get_words_by_module(

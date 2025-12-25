@@ -11,6 +11,9 @@ class WordBase(BaseModel):
 class WordCreate(WordBase):
     pass
 
+class WordCreateWithModule(WordCreate):
+    module_id: UUID
+
 class WordUpdate(BaseModel):
     text_en: str | None = None
     meaning_vi: str | None = None

@@ -52,6 +52,7 @@ class ModuleChildOut(BaseModel):
     module_type: str
     is_public: bool
     created_at: datetime
+    count_word: int = 0
 
     class Config:
         from_attributes = True
@@ -64,6 +65,7 @@ class ModuleDetailOut(BaseModel):
     module_type: str
     is_public: bool
     created_at: datetime
+    count_word: int = 0
 
     children: List[ModuleChildOut] = []
 
