@@ -7,7 +7,7 @@ from app.dependencies.authz import require_admin
 from app.schemas.user import UserOut
 from app.services.user_service import UserService
 
-from app.schemas.user_analytics import UserCountByMonth
+from app.schemas.user_analytics import UserCountByMonth, UserMonthlyRegistrationStats, UserRegistrationStats, UserWeeklyRegistrationStats, UserYearlyRegistrationStats
 
 router = APIRouter(
     prefix="/admin/users",
@@ -30,26 +30,35 @@ def count_total_users(db: Session = Depends(get_db)):
     """
     return UserService.count_all_users(db)
 
-@router.get("/count/today", response_model=int)
-def count_users_today(db: Session = Depends(get_db)):
+@router.get("/count/today", response_model=UserRegistrationStats)
+def get_user_registration_stats_today(db: Session = Depends(get_db)):
     """
-    Get the number of users registered today. (Admin only)
+    Get the number of users registered today and yesterday. (Admin only)
     """
-    return UserService.count_users_registered_today(db)
+    return UserService.get_user_registration_stats(db)
 
-@router.get("/count/last-week", response_model=int)
+@router.get("/count/last-week", response_model=UserWeeklyRegistrationStats)
 def count_users_last_week(db: Session = Depends(get_db)):
     """
-    Get the number of users registered in the last 7 days. (Admin only)
+    Get the number of users registered in the current and previous week. (Admin only)
     """
-    return UserService.count_users_registered_last_n_days(db, days=7)
+    return UserService.get_user_weekly_registration_stats(db)
 
-@router.get("/count/last-month", response_model=int)
+@router.get("/count/last-month", response_model=UserMonthlyRegistrationStats)
 def count_users_last_month(db: Session = Depends(get_db)):
     """
-    Get the number of users registered in the last 30 days. (Admin only)
+    Get the number of users registered in the current and previous month. (Admin only)
     """
-    return UserService.count_users_registered_last_n_days(db, days=30)
+    return UserService.get_user_monthly_registration_stats(db)
+
+
+@router.get("/count/last-year", response_model=UserYearlyRegistrationStats)
+def count_users_last_year(db: Session = Depends(get_db)):
+    """
+    Get the number of users registered in the current year vs the same period last year. (Admin only)
+    """
+    return UserService.get_user_yearly_registration_stats(db)
+
 
 @router.get("/count/by-month", response_model=List[UserCountByMonth])
 def count_users_by_month(db: Session = Depends(get_db)):

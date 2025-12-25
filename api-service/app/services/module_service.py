@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 
 from app.models.modules import Module
-from app.schemas.modules import ModuleCreate
+from app.schemas.modules import ModuleCreate, AdminModuleCreate
 from app.models.user import User
 from app.models.words import Word
 from app.models.module_word import ModuleWord
@@ -66,7 +66,7 @@ class ModuleService:
 
     @staticmethod
     def create_for_admin(db: Session, data: ModuleCreate):
-        existing_module = db.query(Module).filter(Module.name == data.name).first()
+        existing_module = db.query(Module).first()
         if existing_module:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
         
@@ -77,12 +77,37 @@ class ModuleService:
         return new_module
 
     @staticmethod
+    def create_module_with_words_for_admin(db: Session, data: AdminModuleCreate, admin_id: UUID):
+        existing_module = db.query(Module).first()
+        if existing_module:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
+
+        module_data = data.model_dump(exclude={"word_ids"})
+        new_module = Module(**module_data, owner_id=admin_id, module_type="system")
+        
+        db.add(new_module)
+        db.flush()  # Use flush to get the new_module.id before commit
+
+        for word_id in data.word_ids:
+            # check if word exists
+            word = db.query(Word).filter(Word.id == word_id).first()
+            if not word:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Word with id {word_id} not found")
+
+            module_word = ModuleWord(module_id=new_module.id, word_id=word_id)
+            db.add(module_word)
+
+        db.commit()
+        db.refresh(new_module)
+        return new_module
+
+    @staticmethod
     def update_for_admin(db: Session, module_id: UUID, data: ModuleUpdate):
         module = db.query(Module).outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id).filter(Module.id == module_id, ModuleDelete.module_id.is_(None)).first()
         if not module:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found or has been deleted")
 
-        existing_module = db.query(Module).filter(Module.name == data.name, Module.id != module_id).first()
+        existing_module = db.query(Module).filter(Module.id != module_id).first()
         if existing_module:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
 

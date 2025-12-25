@@ -6,9 +6,10 @@ from typing import List, Optional
 from app.db import get_db
 from app.dependencies.authz import get_current_user, require_admin
 from app.models.user import User
-from app.schemas.modules import ModuleCreate, ModuleOut, ModuleUpdate, MarketModuleOut
+from app.schemas.modules import ModuleCreate, ModuleOut, ModuleUpdate, MarketModuleOut, AdminModuleCreate
 from app.schemas.words import WordOut
 from app.services.module_service import ModuleService
+
 
 router = APIRouter(
     prefix="/admin/modules",
@@ -51,6 +52,15 @@ def get_words_by_module_admin(
 @router.post("/", response_model=ModuleOut, status_code=201)
 def create_module(data: ModuleCreate, db: Session = Depends(get_db)):
     return ModuleService.create_for_admin(db, data)
+
+
+@router.post("/with-words", response_model=ModuleOut, status_code=201)
+def create_module_with_words(
+    data: AdminModuleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return ModuleService.create_module_with_words_for_admin(db, data, current_user.id)
 
 
 # ==========================================================

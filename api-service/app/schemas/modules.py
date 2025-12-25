@@ -12,6 +12,9 @@ class ModuleBase(BaseModel):
 class ModuleCreate(ModuleBase):
     owner_id: UUID
 
+class AdminModuleCreate(ModuleBase):
+    word_ids: List[UUID] = []
+
 class ModuleUpdate(BaseModel):
     name: str | None = None
     description: str | None = None

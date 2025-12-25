@@ -55,10 +55,115 @@ class UserService:
         return db.query(User).filter(func.date(User.created_at) == today).count()
 
     @staticmethod
+    def count_users_registered_yesterday(db: Session) -> int:
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        return db.query(User).filter(func.date(User.created_at) == yesterday).count()
+
+    @staticmethod
+    def get_user_registration_stats(db: Session):
+        count_today = UserService.count_users_registered_today(db)
+        count_yesterday = UserService.count_users_registered_yesterday(db)
+        return {"count_today": count_today, "count_yesterday": count_yesterday}
+
+    @staticmethod
     def count_users_registered_last_n_days(db: Session, days: int) -> int:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days)
         return db.query(User).filter(User.created_at.between(start_date, end_date)).count()
+
+    @staticmethod
+    def get_user_weekly_registration_stats(db: Session):
+        today = date.today()
+        start_of_this_week = today - timedelta(days=today.weekday())
+        end_of_this_week = start_of_this_week + timedelta(days=6)
+
+        start_of_last_week = start_of_this_week - timedelta(days=7)
+        end_of_last_week = start_of_last_week + timedelta(days=6)
+
+        count_this_week = (
+            db.query(User)
+            .filter(func.date(User.created_at) >= start_of_this_week)
+            .filter(func.date(User.created_at) <= end_of_this_week)
+            .count()
+        )
+
+        count_last_week = (
+            db.query(User)
+            .filter(func.date(User.created_at) >= start_of_last_week)
+            .filter(func.date(User.created_at) <= end_of_last_week)
+            .count()
+        )
+
+        return {
+            "count_this_week": count_this_week,
+            "count_last_week": count_last_week,
+        }
+
+    @staticmethod
+    def get_user_monthly_registration_stats(db: Session):
+        today = date.today()
+
+        # This month
+        start_of_this_month = today.replace(day=1)
+        if today.month == 12:
+            first_day_of_next_month = date(today.year + 1, 1, 1)
+        else:
+            first_day_of_next_month = date(today.year, today.month + 1, 1)
+        end_of_this_month = first_day_of_next_month - timedelta(days=1)
+
+        # Last month
+        end_of_last_month = start_of_this_month - timedelta(days=1)
+        start_of_last_month = end_of_last_month.replace(day=1)
+
+        count_this_month = (
+            db.query(User)
+            .filter(func.date(User.created_at) >= start_of_this_month)
+            .filter(func.date(User.created_at) <= end_of_this_month)
+            .count()
+        )
+
+        count_last_month = (
+            db.query(User)
+            .filter(func.date(User.created_at) >= start_of_last_month)
+            .filter(func.date(User.created_at) <= end_of_last_month)
+            .count()
+        )
+
+        return {
+            "count_this_month": count_this_month,
+            "count_last_month": count_last_month,
+        }
+
+    @staticmethod
+    def get_user_yearly_registration_stats(db: Session):
+        today = date.today()
+        
+        # This year
+        start_of_this_year = today.replace(month=1, day=1)
+        
+        count_this_year = (
+            db.query(User)
+            .filter(func.date(User.created_at) >= start_of_this_year)
+            .filter(func.date(User.created_at) <= today)
+            .count()
+        )
+
+        # Last year same period
+        last_year_today = today.replace(year=today.year - 1)
+        start_of_last_year = last_year_today.replace(month=1, day=1)
+
+        count_last_year = (
+            db.query(User)
+            .filter(func.date(User.created_at) >= start_of_last_year)
+            .filter(func.date(User.created_at) <= last_year_today)
+            .count()
+        )
+
+        return {
+            "count_this_year": count_this_year,
+            "count_last_year": count_last_year,
+        }
 
     @staticmethod
     def count_users_by_month_current_year(db: Session):
