@@ -40,7 +40,7 @@ class ModuleService:
                 word_count_subquery, word_count_subquery.c.module_id == Module.id
             )
             .outerjoin(ModuleDelete, Module.id == ModuleDelete.module_id)
-            .filter(ModuleDelete.module_id.is_(None))
+            .filter(ModuleDelete.module_id.is_(None), Module.module_type == "system")
         )
 
         if name:
