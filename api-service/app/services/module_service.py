@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import func
+from typing import List
+
 
 from app.models.modules import Module
 from app.schemas.modules import ModuleCreate, AdminModuleCreate
@@ -66,9 +68,9 @@ class ModuleService:
 
     @staticmethod
     def create_for_admin(db: Session, data: ModuleCreate):
-        existing_module = db.query(Module).first()
-        if existing_module:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
+        # existing_module = db.query(Module).first()
+        # if existing_module:
+        #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
         
         new_module = Module(**data.model_dump())
         db.add(new_module)
@@ -77,29 +79,52 @@ class ModuleService:
         return new_module
 
     @staticmethod
-    def create_module_with_words_for_admin(db: Session, data: AdminModuleCreate, admin_id: UUID):
-        existing_module = db.query(Module).first()
-        if existing_module:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
+    def create_module_with_words_for_admin(
+        db: Session,
+        data: AdminModuleCreate,
+        admin_id: UUID
+    ):
+        """
+        Create a SYSTEM module for admin and attach words to it.
+        
+        - If parent_id is None -> create ROOT module
+        - Module type is always 'system'
+        """
 
         module_data = data.model_dump(exclude={"word_ids"})
-        new_module = Module(**module_data, owner_id=admin_id, module_type="system")
-        
-        db.add(new_module)
-        db.flush()  # Use flush to get the new_module.id before commit
 
+        # ✅ Ensure default parent_id = None (root module)
+        # module_data["parent_id"] = "1edb92b8-0a10-4704-b304-8cbb0fbaf8be"
+
+        new_module = Module(
+            **module_data,
+            owner_id=admin_id,
+            module_type="system"
+        )
+
+        db.add(new_module)
+        db.flush()  # get new_module.id before insert module_words
+
+        # 🔗 Attach words
         for word_id in data.word_ids:
-            # check if word exists
             word = db.query(Word).filter(Word.id == word_id).first()
             if not word:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Word with id {word_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Word with id {word_id} not found"
+                )
 
-            module_word = ModuleWord(module_id=new_module.id, word_id=word_id)
-            db.add(module_word)
+            db.add(
+                ModuleWord(
+                    module_id=new_module.id,
+                    word_id=word_id
+                )
+            )
 
         db.commit()
         db.refresh(new_module)
         return new_module
+
 
     @staticmethod
     def update_for_admin(db: Session, module_id: UUID, data: ModuleUpdate):
@@ -107,9 +132,9 @@ class ModuleService:
         if not module:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found or has been deleted")
 
-        existing_module = db.query(Module).filter(Module.id != module_id).first()
-        if existing_module:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
+        # existing_module = db.query(Module).filter(Module.id != module_id).first()
+        # if existing_module:
+        #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A module with this name already exists")
 
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(module, key, value)
@@ -117,6 +142,72 @@ class ModuleService:
         db.commit()
         db.refresh(module)
         return module
+
+    @staticmethod
+    def remove_words_from_module_for_admin(db: Session, module_id: UUID, word_id: UUID):
+        # 1. Check if module exists
+        module = db.query(Module).filter(Module.id == module_id).first()
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
+
+        # 2. Delete the associations
+        db.query(ModuleWord).filter(
+            ModuleWord.module_id == module_id,
+            ModuleWord.word_id == word_id
+        ).delete(synchronize_session=False)
+
+        db.commit()
+
+        return {"message": "Words removed from module successfully"}
+
+    @staticmethod
+    def update_module_words_for_admin(db: Session, module_id: UUID, word_ids: List[UUID]):
+        # 1. Check if module exists
+        module = db.query(Module).filter(Module.id == module_id).first()
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
+
+        # 2. Delete existing associations
+        db.query(ModuleWord).filter(ModuleWord.module_id == module_id).delete(synchronize_session=False)
+
+        # 3. Add new associations
+        for word_id in word_ids:
+            word = db.query(Word).filter(Word.id == word_id).first()
+            if not word:
+                # maybe collect all missing words and return one error
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Word with id {word_id} not found")
+            module_word = ModuleWord(module_id=module_id, word_id=word_id)
+            db.add(module_word)
+
+        db.commit()
+        return ModuleService.get_words_by_module(db, module_id)
+
+    @staticmethod
+    def add_words_to_module(db: Session, module_id: UUID, word_ids: List[UUID]):
+        # 1. Check if module exists
+        module = db.query(Module).filter(Module.id == module_id).first()
+        if not module:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found")
+
+        # 2. Add new associations, avoiding duplicates
+        added_count = 0
+        for word_id in word_ids:
+            # Check if word exists
+            word = db.query(Word).filter(Word.id == word_id).first()
+            if not word:
+                # Or collect all not found and raise one error
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Word with id {word_id} not found")
+
+            # Check if association already exists
+            existing_association = db.query(ModuleWord).filter_by(module_id=module_id, word_id=word_id).first()
+            if not existing_association:
+                module_word = ModuleWord(module_id=module_id, word_id=word_id)
+                db.add(module_word)
+                added_count += 1
+        
+        db.commit()
+
+        return {"message": f"Added {added_count} words to module successfully."}
 
     @staticmethod
     def restore_for_admin(db: Session, module_id: UUID):

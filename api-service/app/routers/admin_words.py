@@ -6,7 +6,9 @@ from typing import List, Optional
 from app.db import get_db
 from app.dependencies.authz import require_admin
 from app.services.word_service import WordService
+from app.services.module_service import ModuleService
 from app.schemas.words import WordCreate, WordUpdate, WordOut, WordCreateWithModule
+from app.schemas.module_word import AddWordsToModule
 
 router = APIRouter(
     prefix="/admin/words",
@@ -34,6 +36,16 @@ def create_word(
     Create a new word. (Admin only)
     """
     return WordService.create(db, data)
+
+@router.post("/add-to-module", status_code=200)
+def add_words_to_module(
+    data: AddWordsToModule,
+    db: Session = Depends(get_db)
+):
+    """
+    Add a list of existing words to a module.
+    """
+    return ModuleService.add_words_to_module(db, module_id=data.module_id, word_ids=data.word_ids)
 
 @router.post("/with-module", response_model=WordOut, status_code=status.HTTP_201_CREATED)
 def create_word_with_module(

@@ -2,9 +2,10 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import date, datetime, timedelta
 from sqlalchemy import func
+from uuid import UUID
 
 from app.models.user import User
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, UserUpdate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -28,6 +29,25 @@ class UserService:
         db.commit()
         db.refresh(user)
         return user
+
+    @staticmethod
+    def get_user_by_id(db: Session, user_id: UUID):
+        return db.query(User).filter(User.id == user_id).first()
+
+    @staticmethod
+    def update_user(db: Session, user_id: UUID, user_data: UserUpdate):
+        db_user = UserService.get_user_by_id(db, user_id)
+        if not db_user:
+            return None
+
+        update_data = user_data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_user, key, value)
+
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
 
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:

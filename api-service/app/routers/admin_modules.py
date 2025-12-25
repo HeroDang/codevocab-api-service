@@ -8,6 +8,7 @@ from app.dependencies.authz import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.modules import ModuleCreate, ModuleOut, ModuleUpdate, MarketModuleOut, AdminModuleCreate
 from app.schemas.words import WordOut
+from app.schemas.module_word import ModuleWordsDelete, ModuleWordsUpdate, AddWordsToModule
 from app.services.module_service import ModuleService
 
 
@@ -44,6 +45,30 @@ def get_words_by_module_admin(
     if words is None:
         raise HTTPException(status_code=404, detail="Module not found")
     return words
+
+
+@router.delete("/{module_id}/words", status_code=200)
+def remove_words_from_module_admin(
+    module_id: UUID,
+    data: ModuleWordsDelete,
+    db: Session = Depends(get_db)
+):
+    """
+    Remove words from a module. (Admin only)
+    """
+    return ModuleService.remove_words_from_module_for_admin(db, module_id, data.word_id)
+
+
+@router.put("/{module_id}/words", response_model=List[WordOut])
+def update_module_words_admin(
+    module_id: UUID,
+    data: ModuleWordsUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update the words in a module. This will replace all existing words. (Admin only)
+    """
+    return ModuleService.update_module_words_for_admin(db, module_id, data.word_ids)
 
 
 # ==========================================================

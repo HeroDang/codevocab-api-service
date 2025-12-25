@@ -31,6 +31,10 @@ class UserCreate(BaseModel):
     name: str | None = None
     avatar_url: str | None = None
 
+class UserUpdate(BaseModel):
+    name: str | None = None
+    avatar_url: str | None = None
+
 class RegisterAndLoginResponse(BaseModel):
     access_token: str
     token_type: str
