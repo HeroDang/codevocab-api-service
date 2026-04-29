@@ -38,7 +38,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./pgadmin_backup:/var/lib/pgadmin 
+      #- ./pgadmin_backup:/var/lib/pgadmin
+      - pgadmin_data:/var/lib/pgadmin 
   
   api-service:                              # <<< SERVICE A MỚI
     build: ./api-service                    # Dockerfile nằm trong folder api-service
@@ -55,3 +56,4 @@ services:
 volumes:
   db_data:
   db_test_data:
+  pgadmin_data:

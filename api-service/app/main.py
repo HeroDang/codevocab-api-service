@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import words, modules, auth, admin_modules, groups, dictionary, admin_words, admin_users, users
+from app.routers import words, modules, auth, admin_modules, groups, dictionary, admin_words, admin_users, users, user_profiles
 
 app = FastAPI(
     title="Server API Service - Vocabulary Backend",
@@ -26,6 +26,7 @@ app.include_router(modules.router)
 app.include_router(groups.router)
 app.include_router(dictionary.router)
 app.include_router(users.router)
+app.include_router(user_profiles.router)
 
 
 @app.get("/")
