@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import uuid
+from typing import List
 
 from app.db import get_db
 from app.services.user_profile_service import UserProfileService, get_user_profile_service
 from app.schemas.user_profile import UserProfile, UserProfileBase, UserProfileUpdatePhonemes
+from app.schemas.modules import ModuleOut
 
 router = APIRouter(
     prefix="/user-profiles",
@@ -47,3 +49,13 @@ def update_user_weak_phonemes(
         )
         
     return updated_profile
+
+@router.get("/modules/with-parent-id", response_model=List[ModuleOut])
+def get_modules_with_parent_id(
+    user_profile_service: UserProfileService = Depends(get_user_profile_service)
+):
+    """
+    Retrieve all modules that have a non-null parent_id.
+    """
+    modules = user_profile_service.get_all_modules_with_parent_id()
+    return modules

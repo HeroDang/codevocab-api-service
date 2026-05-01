@@ -4,6 +4,7 @@ import uuid
 
 from app.db import get_db
 from app.models.user_profile import UserProfile
+from app.models.modules import Module
 
 class UserProfileService:
     def __init__(self, db: Session):
@@ -44,6 +45,18 @@ class UserProfileService:
         self.db.refresh(user_profile)
         
         return user_profile
+
+    # def get_all_modules_with_parent_id(self):
+    #     return self.db.query(Module).filter(
+    #         Module.parent_id.isnot(None),
+    #         Module.module_type == "system",
+    #         Module.is_public == False
+    #     ).all()
+
+    def get_all_modules_with_parent_id(self):
+        return self.db.query(Module).filter(
+            Module.parent_id.in_(["5c334e04-f4f2-4d9e-a8c8-2b58c92b39d1", "7f105d0d-bbd1-4a8d-9c6e-7fc14ed29712"])
+        ).all()
 
 def get_user_profile_service(db: Session = Depends(get_db)):
     return UserProfileService(db)
