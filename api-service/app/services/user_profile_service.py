@@ -29,8 +29,11 @@ class UserProfileService:
         # 2. Lấy dict weak_phonemes hiện tại (đảm bảo là dict)
         current_weak_phonemes = dict(user_profile.weak_phonemes) if user_profile.weak_phonemes else {}
 
-        # 3. Duyệt mảng input và tăng giá trị +1
-        for phoneme in phonemes_to_update:
+        # 3. Duyệt mảng input, làm sạch ký tự "/" và tăng giá trị +1
+        for raw_phoneme in phonemes_to_update:
+            # Loại bỏ ký tự "/" ở đầu và cuối chuỗi (ví dụ: "/v/" -> "v")
+            phoneme = raw_phoneme.strip("/") 
+            
             if phoneme in current_weak_phonemes:
                 current_weak_phonemes[phoneme] += 1
             else:
